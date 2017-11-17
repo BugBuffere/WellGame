@@ -21,13 +21,16 @@ public class GameRule {
 	
 	private final static int OBLIQUE = 2;
 	
-	public void setBoard(int[][] board){
+	private boolean debug = false;
+	
+	public void setBoard(int[][] board,boolean isDebug){
 		if (board == null) {
 			return;
 		}
 		if (board.length != board[0].length) {
 			return;
 		}
+		debug = isDebug;
 		this.board = board;
 	}
 	
@@ -37,37 +40,45 @@ public class GameRule {
 	 */
 	public int checkWin(){
 		if (board == null) {
-			return 0;
+			return Config.NONE;
 		}
 		userWin.clear();
 		computerWin.clear();
 		boolean isWin = false;
 		for (int i = 0; i < board.length; i++) {
-			if (board[i][0] != 0) {
-				continuityCount = 0;
-				isWin = oblique(i, 0, board[i][0], ROW, false);
-				if (isWin) {
-					return board[i][0];
+			continuityCount = 0;
+			isWin = oblique(i, 0, board[i][0], ROW, false);
+			if (isWin) {
+				if (!debug) {
+					System.out.println("胜利row:: x=" + i + " y=" + 0);
+					show();
 				}
+				return board[i][0];
 			}
 			if (i == 0) {
 				for (int j = 0; j < board.length; j++) {
-					if (board[i][j] != 0) {
+					continuityCount = 0;
+					isWin = oblique(i, j, board[i][j], COL, false);
+					if (isWin) {
+						if (!debug) {
+							System.out.println("胜利col:: x=" + i + " y=" + j);
+							show();
+						}
+						return board[i][j];
+					}
+					if (j == 0) {
 						continuityCount = 0;
-						isWin = oblique(i, j, board[i][j], COL, false);
-						if (isWin) {
-							return board[i][j];
+						isWin = oblique(i, j, board[i][j], OBLIQUE, true);
+					}else if (j == board.length -1) {
+						continuityCount = 0;
+						isWin = oblique(i, j, board[i][j], OBLIQUE, false);
+					}
+					if (isWin) {
+						if (!debug) {
+							System.out.println("胜利oblique:: x=" + i + " y=" + j);
+							show();
 						}
-						if (j == 0) {
-							continuityCount = 0;
-							isWin = oblique(i, j, board[i][j], OBLIQUE, true);
-						}else if (j == board.length -1) {
-							continuityCount = 0;
-							isWin = oblique(i, j, board[i][j], OBLIQUE, false);
-						}
-						if (isWin) {
-							return board[i][j];
-						}
+						return board[i][j];
 					}
 				}
 			}
@@ -108,36 +119,40 @@ public class GameRule {
 	 * @return
 	 */
 	private boolean oblique(int x,int y,int value,int model,boolean isSine){
+		if (value == 0) {
+			int[] next = nextXY(x, y, model, isSine);
+			int nextX = next[0];
+			int nextY = next[1];
+			if (nextX < 0 || nextX >= board.length || nextY < 0 || nextY >= board.length) {
+				return false;
+			}
+			if (board[nextX][nextY] != 0) {
+				boolean isWin = oblique(nextX, nextY, board[nextX][nextY], model, isSine);
+				if (isWin && continuityCount == board.length -1) {
+					switch (board[nextX][nextY]) {
+					case Config.USER_VALUE:
+						userWin.add(new Spot(x, y, Config.USER_VALUE));
+						break;
+					case Config.COMPUTER_VALUE:
+						computerWin.add(new Spot(x, y, Config.COMPUTER_VALUE));
+						break;
+					default:
+						break;
+					}
+				}
+			}
+			return false;
+		}
 		boolean isWin  = board[x][y] == value;
 		if (isWin) {
 			continuityCount++;
-			switch (model) {
-			case ROW:
-				y += 1;
-				if (y >= board.length) {
-					return isWin;
-				}
-				return oblique(x, y, value, model, isSine);
-			case COL:
-				x += 1;
-				if (x >= board.length) {
-					return isWin;
-				}
-				return oblique(x, y, value, model, isSine);
-			case OBLIQUE:
-				x += 1;
-				if (isSine) {
-					y += 1;
-				}else{
-					y -= 1;
-				}
-				if (x >= board.length || y < 0 || y >= board.length) {
-					return isWin;
-				}
-				return oblique(x, y, value,model, isSine);
-			default:
-				break;
+			int[] next = nextXY(x, y, model, isSine);
+			int nextX = next[0];
+			int nextY = next[1];
+			if (nextX < 0 || nextX >= board.length || nextY < 0 || nextY >= board.length) {
+				return isWin;
 			}
+			return oblique(nextX, nextY, value, model, isSine);
 		}else if (board[x][y] == 0) {
 			if (continuityCount == board.length - 1) {
 				if (value == Config.USER_VALUE) {
@@ -146,43 +161,14 @@ public class GameRule {
 					computerWin.add(new Spot(x, y));
 				}
 			}else if(continuityCount < board.length - 1){
-				int nextX = 0;
-				int nextY = 0;
-				switch (model) {
-				case ROW:
-					nextX = x;
-					nextY = y + 1;
-					if (nextY >= board.length) {
-						return isWin;
-					}
-					if (board[nextX][nextY] == value) {
-						isWin = oblique(nextX, nextY, value, model, isSine);
-					}
-					break;
-				case COL:
-					nextX = x + 1;
-					nextY = y;
-					if (nextX >= board.length) {
-						return isWin;
-					}
-					if (board[nextX][nextY] == value) {
-						isWin = oblique(nextX, nextY, value, model, isSine);
-					}
-					break;
-				case OBLIQUE:
-					nextX = x + 1;
-					if (isSine) {
-						nextY = y +1;
-					}else{
-						nextY = y - 1;
-					}
-					if (nextX >= board.length || nextY < 0 || nextY >= board.length) {
-						return isWin;
-					}
-					if (board[nextX][nextY] == value) {
-						isWin = oblique(nextX, nextY, value, model, isSine);
-					}
-					break;
+				int[] next = nextXY(x, y, model, isSine);
+				int nextX = next[0];
+				int nextY = next[1];
+				if (nextX < 0 || nextX >= board.length || nextY < 0 || nextY >= board.length) {
+					return isWin;
+				}
+				if (board[nextX][nextY] == value) {
+					isWin = oblique(nextX, nextY, value, model, isSine);
 				}
 				if (isWin && continuityCount == board.length -1) {
 
@@ -198,6 +184,36 @@ public class GameRule {
 		}
 		return isWin;
 	}
+	
+	private int[] nextXY(int x,int y,int model,boolean isSine){
+		int[] next = new int[2];
+		int nextX = 0;
+		int nextY = 0;
+		switch (model) {
+		case ROW:
+			nextX = x;
+			nextY = y + 1;
+			break;
+		case COL:
+			nextX = x + 1;
+			nextY = y;
+			break;
+		case OBLIQUE:
+			nextX = x + 1;
+			if (isSine) {
+				nextY = y +1;
+			}else{
+				nextY = y - 1;
+			}
+			break;
+		default:
+			break;
+		}
+		next[0] = nextX;
+		next[1] = nextY;
+		return next;
+	}
+	
 	/**
 	 * 检测是否是胜点点
 	 * @param board
@@ -237,5 +253,21 @@ public class GameRule {
 		}
 		return false;
 	}
+	
+	/**
+	 * 展示棋盘
+	 */
+	public void show(){
+		System.out.println("GameRule show!!!");
+		for (int i = 0; i < board.length; i++) {
+			for (int j = 0; j < board.length; j++) {
+				//System.out.print("[" + i + "," + j + "=" + board[i][j] + "]\t");
+				System.out.print(board[i][j] + "\t");
+			}
+			System.out.println();
+		}
+		System.out.println("分割线------------------------------------------");
+	}
+	
 
 }

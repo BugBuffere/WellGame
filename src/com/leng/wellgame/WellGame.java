@@ -17,6 +17,8 @@ public class WellGame {
 	
 	private GameRule mRule;
 	
+	private GameChangeListener mChangeListener;
+	
 	public WellGame(int size){
 		this.size = size;
 		board = new int[size][size];
@@ -25,21 +27,23 @@ public class WellGame {
 	
 	private Spot history;
 	
+	private int gameState = Config.NONE;
+	
 	/**
 	 * 用户下棋
 	 * @param x
 	 * @param y
 	 */
-	public void user(int x,int y){
-		addData(x, y, Config.USER_VALUE);		
+	public boolean user(int x,int y){
+		return addData(x, y, Config.USER_VALUE);		
 	}
 	/**
 	 * 机器下棋
 	 * @param x
 	 * @param y
 	 */
-	public void computer(int x,int y){
-		addData(x, y, Config.COMPUTER_VALUE);
+	public boolean computer(int x,int y){
+		return addData(x, y, Config.COMPUTER_VALUE);
 	}
 	
 	public void computerAuto(){
@@ -55,14 +59,14 @@ public class WellGame {
 	 */
 	private Spot analyticFunction(){
 		Spot analytic = null;
-		/*System.out.println("用户的胜点::" + mRule.getUsetWin());
-		System.out.println("电脑的胜点::" + mRule.getComputerWin());*/
+		System.out.println("用户的胜点::" + mRule.getUsetWin());
+		System.out.println("电脑的胜点::" + mRule.getComputerWin());
 		//如果用户已经拿到胜点直接抢占胜点
-		if (!mRule.getUsetWin().isEmpty()) {
-			return mRule.getUsetWin().get(0);
-		}
 		if (!mRule.getComputerWin().isEmpty()) {
 			return mRule.getComputerWin().get(0);
+		}
+		if (!mRule.getUsetWin().isEmpty()) {
+			return mRule.getUsetWin().get(0);
 		}
 		//System.out.println(history);
 		DecisionTree decision = new DecisionTree(size, history);
@@ -86,20 +90,60 @@ public class WellGame {
 		return analytic;
 	}
 	
-	private void addData(int x,int y,int value){
+	private boolean addData(int x,int y,int value){
 		if (x < 0 || x >= board.length || y < 0 || y >= board.length) {
-			return;
+			return false;
+		}
+		if (board[x][y] != 0) {
+			return false;
 		}
 		board[x][y] = value;
 		count++;
+		upGameChanged(x,y,value);
 		addHistory(x, y, value);
 		if (value == Config.USER_VALUE) {
 			System.out.println("用户开始走……");
 		}else if (value == Config.COMPUTER_VALUE) {
 			System.out.println("电脑开始走……");
-		}
-		checkWin();
+		}	
 		show();
+		System.out.println("记录栈::" + history);
+		checkGame(value);
+		return true;
+	}
+	
+	private void upGameChanged(int x, int y, int value) {
+		if (mChangeListener != null) {
+			System.err.println("更新布局 x::" + x + " y::" + y + " vale::" + value);
+			mChangeListener.update(x, y, value);
+		}
+	}
+	/**
+	 * 检测并输出游戏结果
+	 */
+	private void checkGame(int value){
+		gameState = checkWin();
+		System.out.println();
+		if (mChangeListener != null) {
+			switch (gameState) {
+			case Config.NONE:
+				if (value == Config.USER_VALUE) {
+					computerAuto();
+				}
+				break;
+			case Config.USER_VALUE:
+				mChangeListener.gameOver("你胜利了!!!");
+				break;
+			case Config.COMPUTER_VALUE:
+				mChangeListener.gameOver("电脑胜利!!");
+				break;
+			case Config.GAME_OVER:
+				mChangeListener.gameOver("平局!");
+				break;
+			default:
+				break;
+			}
+		}
 	}
 	
 	private void addHistory(int x,int y,int value){
@@ -117,6 +161,10 @@ public class WellGame {
 			}
 		}
 		prev.setNext(new Spot(x, y,value));
+	}
+	
+	public int getGameState(){
+		return gameState;
 	}
 	
 	public int checkWin(){
@@ -148,6 +196,10 @@ public class WellGame {
 	
 	public Spot history(){
 		return history;
+	}
+	
+	public void setGameChangeListener(GameChangeListener listener){
+		mChangeListener = listener;
 	}
 	
 	@SuppressWarnings("unused")
@@ -203,6 +255,14 @@ public class WellGame {
 					+ ", next=" + next + "]";
 		}
 		
+	}
+
+	public void relase() {
+		board = new int[size][size];
+		mRule.setBoard(board,false);
+		history = null;
+		gameState = Config.NONE;
+		count = 0;
 	}
 	
 }

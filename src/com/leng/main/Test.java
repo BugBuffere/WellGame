@@ -21,7 +21,7 @@ public class Test {
 	private static BufferedWriter bos;
 	
 	public static void main(String[] args) {
-		startGame();
+		testGameRule();
 	}
 	
 	public static void startGame(){
@@ -40,11 +40,11 @@ public class Test {
 			int y = Integer.parseInt(strs[1]);
 			game.user(x, y);
 			win = game.checkWin();
-			if (win == 0) {
+			/*if (win == 0) {
 				game.computerAuto();
 			}else{
 				break;
-			}
+			}*/
 		}
 		switch (win) {
 		case Config.USER_VALUE:
@@ -96,11 +96,9 @@ public class Test {
 		 * 	0	-1	0
 		 *  1	0	0
 		 */
-		board[0][0] = 1;
-		board[1][1] = -1;
-		board[0][1] = 1;
-		board[0][2] = -1;
-		board[2][0] = 1;
+		board[1][1] = 1;
+		board[2][1] = 1;
+		board[2][2] = -1;
 		GameRule rule = new GameRule(board);
 		rule.checkWin();
 		System.out.println("userWin::" + rule.getUsetWin());

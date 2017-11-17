@@ -102,7 +102,7 @@ public class DecisionTree {
 				board[parent.getX()][parent.getY()] = parent.performer();
 				deatilsTree = parent;
 			}
-			mRule.setBoard(board);
+			mRule.setBoard(board,true);
 			int win = mRule.checkWin();
 			switch (win) {
 			case Config.NONE:
